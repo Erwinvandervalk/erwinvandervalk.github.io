@@ -1,0 +1,9 @@
+@charset "utf-8";
+
+@import "jekyll-theme-midnight";
+
+@import
+  "base",    // Defines element resets.
+  "layout",  // Defines structure and style based on CSS selectors.
+  "code"     // Defines style related to code
+;

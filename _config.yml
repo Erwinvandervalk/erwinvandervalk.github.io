@@ -1,0 +1,24 @@
+# Site information
+title: Erwin's Blog
+email: erwin@vandervalk.pro
+description: Observations and rants
+baseurl: ""
+url: "https://erwinvandervalk.github.io"
+
+# Site settings
+permalink: /:title/
+markdown: kramdown
+paginate: 5
+paginate_path: "/:num/"
+date_format: "%b %-d, %Y"
+
+
+
+google_analytics: 
+google_ads: 
+
+plugins:
+  - jekyll-feed
+  - jekyll-paginate
+  - jekyll-seo-tag
+  - jekyll-sitemap
