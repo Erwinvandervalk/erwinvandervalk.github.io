@@ -1,12 +1,14 @@
 ---
 layout: post
-title:  "Characteristics of good automated tests"
-date:   2021-11-10 09:47:57 +0100
+title:  "Characteristics of well written tests"
+date:   2021-11-15 09:47:57 +0100
 categories: unit-testing, practices
 ---
 
-When writing automated (unit?) tests, what do you consider to be a good test vs a bad test? When speaking to various people,
-and reviewing a LOT of code, i'm finding that many people have different thoughts and idea's about this. I'm quite passionate about automated testing, so I figured I'd jot down my own thoughts here.  
+We don't write tests 'just for fun', but because we believe that it brings certain important benefits. Without (enough of) these benefits, it's 
+just overhead and useless ceremony. So the question is, what are the characteristics that make unit testing worth while? And what issues should we avoid?
+
+When speaking to various people and reviewing a LOT of code, i'm finding that many people have different thoughts and idea's about this. I'm quite passionate about automated testing, so I figured I'd jot down my own thoughts here.  
 
 > I started writing a completely different blog post.. Then from there, this post started to form.. then it became too big. WAY to big. So I cut it down so I can at least get something out. Hopefully, I'll be able to post the others soon as well. 
 
@@ -14,7 +16,7 @@ In this post, i'm talking about automated tests, but they apply equally well to 
 
 # Characteristics of well written tests. 
 
-We don't write tests 'just for fun', but because we believe that it brings certain important benefits. A good test helps you by:
+A good test helps you by:
 
 1. Bringing you **increased understanding**. It helps you to write the code, or when reading the tests to understand what the code does. 
 2. **Protects** you from mistakes during writing / changing / refactoring and bring you **confidence** in the correctness of the code. 
@@ -23,7 +25,8 @@ We don't write tests 'just for fun', but because we believe that it brings certa
 5. Making software development **faster**, not slowing you down. 
    
 
-In my mind, if your tests are not complying with all 3 of these characteristics, that's a smell. If you don
+In my mind, if your tests do not have all of these characteristics, that's a smell. But if they are missing more than one, they might be causing more
+harm than good. 
 
 <br>
 Looking at the inverse of these properties can also be interesting. A test should **not**: 
@@ -37,7 +40,7 @@ Achieving the characteristics above is not as simple. So, how can you achieve th
 Each test should:
 1. have a clear **purpose**. Sometimes this might mean test a single thing (even if the single thing is a complex business scenario). The name of the test is important, but so is the way you write it. 
 2. actually protect you from **real issues**. I've seen too many tests that don't actually protect you from anything. I'll probably write another blog post later about things not worth testing. 
-3. **Draw attention** to the things that are important in your test, while hiding the things which are not. Think deep and hard about what you want your test to express. What are the things that are different in this test from the other tests? This ties in again to it's purpose. Use normal programming techniques (such as data builders, fixtures, helper methods, etc) to hide things which are needed to make the test work, but don't bring understanding. 
+3. **Draw attention** to the things that are important in your test, while hiding the things which are not. Think deep and hard about what you want your test to express. What are the things that are different in this test from the other tests? This ties in again to it's purpose. Hiding the unimportant ceremony in helpers (such as data builders, fixtures, helper methods, etc) has the benefit of both **focussing attention** on what IS important but also allowing you to **reuse** the logic. 
 4. Avoid **static mutable state** like the plague. Static mutable state is the thing that makes your test run fine when running them one at a time, but fail when you run them together, or on the build server. 
 5. Be written at the **appropriate level** of technical complexity. Business oriented components have different requirements than more technical components. 
 6. Clearly express the **reason for failures**. Tests will eventually fail (otherwise, what's their purpose?). When a test fails, should be quickly clear why they fail, ideally without the need for debugging. I've often found printing log messages to the test output window is a very powerful method for this.. 
