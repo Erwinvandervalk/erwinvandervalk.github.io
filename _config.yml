@@ -1,9 +1,9 @@
 # Site information
-title: Erwin's Blog
+title: Erwin's Blog 
 email: erwin@vandervalk.pro
-description: Observations and rants
+description: Blogging on life, the universe and everything (but mainly tech)
 baseurl: ""
-url: "https://erwinvandervalk.github.io"
+url: "https://erwin.vandervalk.pro"
 
 # Site settings
 permalink: /:title/
