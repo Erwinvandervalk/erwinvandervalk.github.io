@@ -138,11 +138,11 @@ that be clear from the actual code, rather than the tests?
 In the arrange step, you set up your mocks. Often, specific tests have specialized setup requirements. So, each mock setup is every so slightly different. But, because you have
 to mock out every interaction, it's not clear if a specific interaction is there 'just because(tm)' or if it's actually significant for your tests. 
 
-Then you have an act phase. This is usually the best part of your tests. The thing that's really important. But it's buried in the rest of your test. So you have to put a ``` csharp //act ``` comment above it
-just to call out that it's a 
+Then you have an act phase. This is usually the best part of your tests. The thing that's really important. But it's buried in the rest of your test. So you have to put a //act comment above it
+just to call out where it is. 
 
 Then there is the assert. Sometimes you see big lists of assertions, but also often a Mock.Verify(). When you first read this test, 
-you have NO idea what's actually being verified. Then you have to look back
+you have NO idea what's actually being verified. Then you have to look back to see what's going on, adding to the overall confusion. 
 
 What's a better approach to this? The Given-When-Then pattern usually makes much more readable tests. 
 Given a certain state, when you perform an action, you observe the following results. 
@@ -168,7 +168,9 @@ Compare the following test that uses mocking with the one below without:
             var now = new DateTimeOffset(2000, 1, 2, 3, 4, 5, TimeSpan.FromHours(6));
             A.CallTo(() => dateTimeProvider.GetNow()).Returns(now);
 
-            var sut = new ScheduleTestAppointmentCommandHandler(repository, dateTimeProvider);
+            var sut = new ScheduleTestAppointmentCommandHandler(
+                repository, 
+                dateTimeProvider);
 
             var scheduleTestAppointmentCommand = new ScheduleTestAppointmentCommand()
             {
@@ -183,7 +185,8 @@ Compare the following test that uses mocking with the one below without:
 
             // Assert
             A.CallTo(() => repository.SaveAsync(A<CoronaTestEntity>.That.Matches(c =>
-                        c.TestSubjectName == scheduleTestAppointmentCommand.TestSubjectName
+                        c.TestSubjectName == 
+                            scheduleTestAppointmentCommand.TestSubjectName
                         && c.TestSubjectIdentificatieNummer == 
                             scheduleTestAppointmentCommand.TestSubjectIdentificatieNummer
                         && c.Location == scheduleTestAppointmentCommand.Location
@@ -203,8 +206,9 @@ But reading this, I have questions:
 The actual logic (calling the command) is hidden between the setup and assertion. 
 
 And, if you have to make changes (for example, change the repository signature), you have to get ready for a LOT of changes. 
+Yes, you could probably write this better, but this example closely follows what I see in the wild. 
 
-Contrast that with the following. 
+Contrast that with the following: 
 ``` csharp
 
         [Fact]
@@ -228,6 +232,10 @@ This test works at the api boundary (though it would have worked equally well at
 test only cares about the things the end user cares about. When you do **X**, you can observe **Y**. Anything else 
 is not important for this test. 
 
+No, this is not an integration test, because I'm testing a single boundary here. Any external dependencies (such  
+the e-mail sending in this example). And as for databases? If the test doesn't slow you down too much, I would
+encourage you to include them in your tests. Otherwise, create a stub at the absolute lowest level. 
+
 ## Single Responsibility Principle causes harm here
 
 Bob Martin coined the SOLID Principles, with the Single Responsibility Principle being the one people
@@ -242,16 +250,25 @@ Your business logic is spread across multiple classes, so the tests that verify 
 
 For example:
 1. Input validation (IE: is a field of the right type?) is usually done where you map the request to your model. For example in the controllers. 
-2. Busines rule validation is often done in a domain layer
+2. Business rule validation is often done in a domain layer
 3. With the exception of validation rules that are easier / better to do in the database. For example, duplicate constraints can very easily be handled in the database in a transactional fashion. Trying to do this in the business layer means you're going to have 
 4. Some validations cannot (or shouldn't) be done transactionally, but are actually part of an asynchronous business process. 
 
 In an ideal world, you can look at the tests to get a good understanding of the functionality and rules of the system. When each test only covers a single class, and each class only covers a small part of the functionality, it becomes really hard to get a good overview of the system. 
 
-I often hear, yes, but if you test more than one class, you're writing integration tests. 
+I don't have a big problem with SOLID when applied sanely. However, I'm finding that people really go overboard. Then couple that with going
+overboard with using mocks and you really set yourself up for trouble.  
+
+Anyway, I favor [CUPID](https://dannorth.net/2021/03/16/cupid-the-back-story/) over SOLID any time. 
 
 # Conclusion
 
 In this post, I've highlighted the issues I have with the use of mocking. As this post has become too long already
 I'll post this now and try to focus on what you can do to avoid mocking libraries in a future post. 
+
+But hey, don't take my word for it:
+
+* [https://www.thoughtworks.com/insights/blog/mockists-are-dead-long-live-classicists](https://www.thoughtworks.com/insights/blog/mockists-are-dead-long-live-classicists) 
+* [https://martinfowler.com/bliki/UnitTest.html](https://martinfowler.com/bliki/UnitTest.html)
+* [https://martinfowler.com/articles/mocksArentStubs.html](https://martinfowler.com/articles/mocksArentStubs.html)
 
