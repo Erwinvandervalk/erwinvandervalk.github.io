@@ -130,7 +130,7 @@ So how do we prevent that? Don't mock your implementation, but *where possible* 
 
 ## Hard to understand test tests. 
 
-The arrange-act-assert pattern of tests is often used in conjunction with mocking and SRP. So badly, that I often
+The arrange-act-assert pattern of tests is often used in conjunction with mocking and [SRP](https://en.wikipedia.org/wiki/Single-responsibility_principle). So badly, that I often
 see people adding comments to show which bit of the test actually is part of arranging / acting / asserting. Shouldn't 
 that be clear from the actual code, rather than the tests?
 
