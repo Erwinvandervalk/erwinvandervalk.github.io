@@ -1,11 +1,13 @@
 ---
 layout: post
 title:  "Stop making a Mock<things>"
-date:   2021-12-11 09:47:57+0100
+date:   2021-12-05 09:47:57+0100
 categories: unit-testing, practices
 ---
 
-In this post, I'll do my best to move you away from mocking libraries and the tendency of some .Net developers to declare interfaces on EVERY class. 
+I don't like mocks anymore. I used them heavily in the past, but now that I've moved away from this approach,
+my tests have become a lot better. In this post, I hope to convince you to do the same. In a future post, i'll
+describe better ways to test. 
 
 ## TLDR;
 
@@ -20,13 +22,11 @@ Do:
 * Design your classes and components so that truely external dependencies can be isolated.
 * When needed, write hand crafted test doubles to simulate dependencies like external services.
 
-As a test: Can you refactor your code without having to make changes to your tests?
+Consider this: Can you refactor your code without having to make changes to your tests? If not, you're in trouble. 
 
-So, stop making a Mock<things> and you'll be better off. 
+So, stop making a Mock of things and you'll be better off.
 
-
-## Background: I see mocking everywhere
-![see mocking](../assets/img/stop-mocking-I-see-mocks.png)
+## Background: I see mocks everywhere
 
 Part of my job is reviewing code written by other teams. As a (primarily) .Net
 developer, that means reading a lot of c# code. It's clear that many developers
@@ -37,19 +37,26 @@ using libraries like [FakeItEasy](https://fakeiteasy.github.io/),
 or one of the many other frameworks. 
 
 What I typically see is:
-* The Single Responsibility principle is followed, so there are a lot of smaller
+* The Single Responsibility principle is followed religiously, so there are a lot of smaller
   classes.
 * Most classes have interfaces (dto's the obvious exception), but there's only a
   single implementation in the codebase. 
 * Each is wrapped in it's own unit test. 
+* Each dependency is mocked out in the unit tests. 
+
+![see mocking](../assets/img/stop-mocking-I-see-mocks.png)
 
 These developers clearly think they are getting a lot of benefits from writing 
 tests so they use their good intentions to spend a lot of energy to write tests 
 that don't nearly provide them as much benefits as they would have hoped. 
 
+
+### This is the way
 When I challenge this mocking approach, I get a lot of push-back: *"A unit has to be
-a class"*. *"If you don't isolate the class, you're testing things double"*. *"This is the 
-only way"*. *"You must isolate a class, otherwise you're doing integration testing"*.
+a class"*. *"If you don't isolate the class, you're testing things twice"*. *"This is the 
+only way(tm)"*. *"You must isolate a class, otherwise you're doing integration testing"*.
+
+![the way](../assets/img/stop-mocking-this-is-the-way.png)
 
 The thing is, it wasn't always like this. This post from [Martin Fowler](https://martinfowler.com/articles/mocksArentStubs.html) 
 describes that classical TDD didn't used to rely on mocking. 
@@ -67,25 +74,14 @@ translated to testing *classes* in isolation and mocking the rest, facilitated
 by mocking frameworks. I'll do my best to describe the problems I'm seeing with
 this 'mockist' approach to testing and show alternatives to them. 
 
-## What are mocks, stubs and fakes
-
-There's a difference between mocks, stubs and fakes. I really like the definitions from [Martin Fowler](https://martinfowler.com/articles/mocksArentStubs.html) article again:
-
-> * Dummy objects are passed around but never actually used. Usually they are just used to fill parameter lists.
-* Fake objects actually have working implementations, but usually take some shortcut which makes them not suitable for production (an in memory database is a good example).
-* Stubs provide canned answers to calls made during the test, usually not responding at all to anything outside what's programmed in for the test.
-* Spies are stubs that also record some information based on how they were called. One form of this might be an email service that records how many messages it was sent.
-* Mocks are what we are talking about here: objects pre-programmed with expectations which form a specification of the calls they are expected to receive.
-
-From a high level, they all perform the same task: replacing real functionality with a substition so you have control over the substitution. Most mocking libraries, such as NSubstitute can handle all of these types. 
-
-# The problems with excessive mocking & mocking libraries
+# The problems with mocking libraries
 
 My biggest problems with the usage of mocking libraries are:
 
 1. You're increasing coupling, which limits your ability to refactor.
 2. You're testing the internals of your class, limiting your possibilities to refactor.
 3. A mock has to simulate the behavior of your class, so you have to implement some logic twice. 
+
 
 I'll go into these points more below. 
 
@@ -162,41 +158,53 @@ One application is written using mocking, the other is not.
 Compare the following test that uses mocking with the one below without:
 
 ``` csharp
-        [Fact]
-        public async void When_confirming_existing_appointment_then_returns_success_response()
+                [Fact]
+        public async Task When_saving_new_appointment_then_save_is_invoked()
         {
             // Arrange
             var repository = A.Fake<ICoronaTestRepository>();
             var dateTimeProvider = A.Fake<IDateTimeProvider>();
 
-            A.CallTo(() => repository.Get(An<Guid>.Ignored, CancellationToken.None))
-                .Returns(Task.FromResult<CoronaTestEntity>(new CoronaTestEntity()
-                {
-                    Id = Guid.NewGuid(),
-                    Location = "a location",
-                    Status = TestStatus.Scheduled,
-                    TestSubjectIdentificatieNummer = "number",
-                    TestSubjectName = "name",
-                    Version = 1
-                }));
+            var now = new DateTimeOffset(2000, 1, 2, 3, 4, 5, TimeSpan.FromHours(6));
+            A.CallTo(() => dateTimeProvider.GetNow()).Returns(now);
 
-            var sut = new RecordTestAdministeredCommandHandler(repository, dateTimeProvider);
+            var sut = new ScheduleTestAppointmentCommandHandler(repository, dateTimeProvider);
+
+            var scheduleTestAppointmentCommand = new ScheduleTestAppointmentCommand()
+            {
+                Location = "testlocation",
+                ScheduledOn = now,
+                TestSubjectIdentificatieNummer = "number",
+                TestSubjectName = "name"
+            };
 
             // Act
-            var result = await sut.Handle(new RecordTestAdministeredCommand()
-            {
-                Id = Guid.NewGuid(),
-                AdministeredOn = DateTimeOffset.Now
-            }, CancellationToken.None);
+            await sut.Handle(scheduleTestAppointmentCommand, CancellationToken.None);
 
-            var success = result.ShouldBeOfType<SuccessResponse>();
-            success.Version.ShouldBe(2);
-            success.Id.ShouldNotBe(Guid.Empty);
+            // Assert
+            A.CallTo(() => repository.SaveAsync(A<CoronaTestEntity>.That.Matches(c =>
+                        c.TestSubjectName == scheduleTestAppointmentCommand.TestSubjectName
+                        && c.TestSubjectIdentificatieNummer == 
+                            scheduleTestAppointmentCommand.TestSubjectIdentificatieNummer
+                        && c.Location == scheduleTestAppointmentCommand.Location
+                        && c.ScheduledOn == now
+                        && c.CreatedOn == now
+                    )
+                    , CancellationToken.None))
+                .MustHaveHappened();
         }
 ```
-In this test, I have to set up the mocks. A lot of things 
+In this test, I have to set up several mocks, then verify that the right call to save the data actually happened. 
+But reading this, I have questions:
+* What does datetime actually have to do with the test? Is the current time important? It may be, it may not be. 
+* What is this 'CoronaTestEntity'? Why is it important here? 
+* Have I verified every property on the corona test entity? Is it ok now? 
 
+The actual logic (calling the command) is hidden between the setup and assertion. 
 
+And, if you have to make changes (for example, change the repository signature), you have to get ready for a LOT of changes. 
+
+Contrast that with the following. 
 ``` csharp
 
         [Fact]
@@ -216,16 +224,16 @@ In this test, I have to set up the mocks. A lot of things
 
 ```
 
-This test works at the api boundary (though it would have worked equally well at the command / query layer). 
-
-
+This test works at the api boundary (though it would have worked equally well at the command / query layer). The
+test only cares about the things the end user cares about. When you do **X**, you can observe **Y**. Anything else 
+is not important for this test. 
 
 ## Single Responsibility Principle causes harm here
 
-Bob martin coined the SOLID Principles, with the Single Responsibility Principle being the one people
+Bob Martin coined the SOLID Principles, with the Single Responsibility Principle being the one people
 remember the best. 
 
-This leads you to create small classes, each with their own little responsibility. This means we're breaking
+This principle leads you to create small classes, each with their own little responsibility. This means we're breaking
 up the functional problem we're trying to solve and splitting it into smaller classes. While there is something
 to be said for this *(but please people, within reason, don't push it to the extreme)*, it has some serious 
 drawbacks when you combine it with writing tests PER Class:
@@ -242,14 +250,8 @@ In an ideal world, you can look at the tests to get a good understanding of the 
 
 I often hear, yes, but if you test more than one class, you're writing integration tests. 
 
-## Compare and contrast
+# Conclusion
 
-
-# Alternatives 
-
-
-
-## Not every class is created equally
-
-## Focussing on flow 
+In this post, I've highlighted the issues I have with the use of mocking. As this post has become too long already
+I'll post this now and try to focus on what you can do to avoid mocking libraries in a future post. 
 
